@@ -1,0 +1,15 @@
+.*sw?
+.DS_Store
+
+# Ruby env control
+.rvmrc*
+.ruby-version*
+.ruby-gemset*
+/.idea
+
+# Emacs temp files
+*~
+
+# bundler artifacts
+.bundle/*
+vendor/bundle/*

@@ -1,0 +1,55 @@
+---
+verbose_logging: false
+alerts_repo_path: ./
+
+group_sources:
+  - type: filesystem
+    enabled: true
+    options:
+       paths: ["./groups"]
+
+host_sources:
+  - type: aws_rds
+    enabled: true
+    options:
+      regions: []
+      access_key_id: "FILL_IN_ACCESS_KEY"
+      secret_access_key: "FILL_IN_SECRET_ACCESS_KEY"
+
+  - type: aws_dynamo
+    enabled: true
+    options:
+      regions: []
+      access_key_id: "FILL_IN_ACCESS_KEY"
+      secret_access_key: "FILL_IN_SECRET_ACCESS_KEY"
+
+  - type: aws_elasticache
+    enabled: true
+    options:
+      regions: []
+      access_key_id: "FILL_IN_ACCESS_KEY"
+      secret_access_key: "FILL_IN_SECRET_ACCESS_KEY"
+
+  - type: optica
+    enabled: true
+    options:
+      host: optica.yourdomain.com
+
+  - type: optica_services
+    enabled: true
+    options:
+      host: optica.yourdomain.com
+      environments: ['production']
+
+  - type: billow_rds
+    enabled: true
+
+  - type: billow_sqs
+    enabled: true
+
+destinations:
+  - type: datadog
+    enabled: true
+    options:
+      app_key: FILL_IN_DATADOG_APP_KEY
+      api_key: FILL_IN_DATADOG_API_KEY
