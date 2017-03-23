@@ -1,6 +1,6 @@
 grammar DatadogQuery
   rule datadog_query
-    (alert
+    (metric_alert
     {
       AS_COUNT ||= 1
       SUM_TIME_AGGR ||= 2
@@ -44,6 +44,18 @@ grammar DatadogQuery
         false
       end
     }
+    / event_alert
+    {
+      def has_conflicts
+        false
+      end
+    }
+    / service_check_alert
+    {
+      def has_conflicts
+        false
+      end
+    }
     )
     # Although this works, it does not produce human-readable error messages
     # We therefore opt to create a Ruby class to check for conflicts
@@ -78,8 +90,12 @@ grammar DatadogQuery
     "*" / [a-zA-Z0-9.:_!/-]+
   end
 
+  rule scope_list
+    scope_name (ws* "," ws* scope_name)*
+  end
+
   rule scope
-    '{' ws* scope_name (ws* "," ws* scope_name)* ws* '}'
+    '{' ws* scope_list ws* '}'
   end
 
   rule group_name
@@ -103,7 +119,7 @@ grammar DatadogQuery
   end
 
   rule series
-    (space_aggrs ":")? metric_name scope (group_by)?
+    (space_aggrs ":")? ws* metric_name ws* scope (group_by)?
   end
 
   rule arithmetic_operator
@@ -187,15 +203,25 @@ grammar DatadogQuery
   end
 
   rule top_function
-    "top" '(' ws* full_query ws* "," ws* top_num_series ws* "," ws* top_ranking ws* "," ws* top_order ws* ')'
+    "top" '(' ws* full_query ws* ","
+              ws* top_num_series ws* ","
+              ws* top_ranking ws* ","
+              ws* top_order ws* ')'
   end
 
   rule top_offset_function
-    "top_offset" '(' ws* full_query ws* "," ws* top_num_series ws* "," ws* top_ranking ws* "," ws* top_order ws* "," ws* top_offset ws* ')'
+    "top_offset" '(' ws* full_query ws* ","
+                     ws* top_num_series ws* ","
+                     ws* top_ranking ws* ","
+                     ws* top_order ws* ","
+                     ws* top_offset ws* ')'
   end
 
   rule forecast_function
-    "forecast" '(' ws* full_query ws* "," ws* forecast_aggr ws* "," ws* seasonality ws* "," ws* seasons ws* ')'
+    "forecast" '(' ws* full_query ws* ","
+                   ws* forecast_aggr ws* ","
+                   ws* seasonality ws* ","
+                   ws* seasons ws* ')'
   end
 
   rule forecast_aggrs
@@ -219,9 +245,10 @@ grammar DatadogQuery
   end
 
   rule anomaly_function
-    "anomalies" '(' ws* full_query ws* "," ws*
-                    anomaly_algorithm ws* "," ws*
-                    anomaly_bounds ws* "," ws* anomaly_direction ws* ')'
+    "anomalies" '(' ws* full_query ws* ","
+                    ws* anomaly_algorithm ws* ","
+                    ws* anomaly_bounds ws* ","
+                    ws* anomaly_direction ws* ')'
   end
 
   rule anomaly_algorithm
@@ -285,7 +312,7 @@ grammar DatadogQuery
   end
 
   rule function
-    ( (functions '(' full_query ')') /
+    ( (functions '(' ws* full_query ws* ')') /
       top_function /
       top_offset_function /
       forecast_function /
@@ -303,7 +330,9 @@ grammar DatadogQuery
   end
 
   rule function_series
-    (arithmetic_pre)* (('(' query ')') / (function / series append_function*)) (arithmetic_post)*
+    (arithmetic_pre)*
+    (('(' query ')') / (function / series append_function*))
+    (arithmetic_post)*
   end
 
   rule query
@@ -326,7 +355,7 @@ grammar DatadogQuery
   end
 
   rule time_aggr
-    time_aggrs "(" time_window ")"
+    time_aggrs "(" ws* time_window ws* ")"
   end
 
   rule time_window
@@ -351,7 +380,118 @@ grammar DatadogQuery
     (change_aggrs "(" ws* time_aggr ws* ',' ws* change_window ws* ")" ) / time_aggr
   end
 
-  rule alert
-    ws* alert_aggr ":" ws* full_query ws* alert_operator ws* decimal ws*
+  rule metric_alert
+    ws* alert_aggr ws* ":" ws* full_query ws* alert_operator ws* decimal ws*
+  end
+
+  # Service Check
+  rule service_check_over
+    ".over" "(" qt ws* scope_list ws* qt ")"
+  end
+
+  rule service_check_last
+    ".last" "(" ws* integer+ ws* ")"
+  end
+
+  rule service_check_alert
+    qt metric_name qt service_check_over service_check_last ".count_by_status()"
+  end
+
+  # Events
+  rule event_rollup_methods
+    "count"
+  end
+
+  rule event_rollup_method
+    (qt event_rollup_methods qt) / event_rollup_methods
+  end
+
+  rule event_rollup
+    ".rollup" "(" ws* event_rollup_method ws* ")"
+  end
+
+  rule event_last_timeframe_units
+    "s" / "m" / "h" / "d"
+  end
+
+  rule event_last_timeframe_duration
+    integer+ event_last_timeframe_units
+  end
+
+  rule event_last_timeframe
+    (qt event_last_timeframe_duration qt) / event_last_timeframe_duration
+  end
+
+  rule event_last
+    ".last" "(" ws* event_last_timeframe ws* ")"
+  end
+
+  rule event_by
+    ".by" "(" qt scope_name qt ")"
+  end
+
+  rule event_query_string_sources_string
+    metric_name
+  end
+
+  rule event_query_string_sources
+    "sources:" event_query_string_sources_string
+               ( "," event_query_string_sources_string )*
+  end
+
+  rule event_query_string_status_string
+    "error" / "warning" / "info"
+  end
+
+  rule event_query_string_status
+    "status:" event_query_string_status_string
+              ( "," event_query_string_status_string )*
+  end
+
+  rule event_query_string_priority_string
+    "low" / "normal" / "all"
+  end
+
+  rule event_query_string_priority
+    "priority:" event_query_string_priority_string
+                ( "," event_query_string_priority_string)*
+  end
+
+  rule event_query_string_host_string
+    name
+  end
+
+  rule event_query_string_host
+    "host:" name ( "," name )*
+  end
+
+  rule event_query_string_tags_string
+    scope_name ("," scope_name)*
+  end
+
+  rule event_query_string_tags
+    "tags:" event_query_string_tags_string
+  end
+
+  rule event_query_string_excluded_tags
+    "excluded_tags:" event_query_string_tags_string
+  end
+
+  rule event_query_string_components
+    event_query_string_sources /
+    event_query_string_status /
+    event_query_string_priority /
+    event_query_string_host /
+    event_query_string_tags /
+    event_query_string_excluded_tags
+  end
+
+  rule event_query_string
+    event_query_string_components (ws+ event_query_string_components)+
+  end
+
+  rule event_alert
+    ws* "events" "(" qt ws* event_query_string ws* qt ")"
+    event_by? event_rollup event_last ws* alert_operator ws* decimal ws*
   end
 end

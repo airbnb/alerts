@@ -117,8 +117,7 @@ describe 'DatadogQueryParser' do
     valid_query('avg(last_1m):min:metric{*} + min:metric_2{*}> 1')
     valid_query('change(avg(last_1m), 5m_ago):metric{*} > 1')
     valid_query('pct_change(avg(last_1m), 5m_ago):metric{*} > 1')
-    valid_query("avg(last_30m):anomalies(sum:metric{*}.as_count().rollup(sum, 30),'agile',2, direction='below') >= 0.5
-")
+    valid_query("avg(last_30m):anomalies(sum:metric{*}.as_count().rollup(sum, 30),'agile',2, direction='below') >= 0.5")
   end
 
   it 'rejects bad alerts' do
@@ -138,4 +137,31 @@ describe 'DatadogQueryParser' do
   it 'allows alerts using anomalies with non-sum time_aggregator with as_count' do
     valid_query("avg(last_30m):anomalies(sum:metric{*}.as_count().rollup(sum, 30),'agile',2, direction='below') >= 0.5")
   end
+
+  it 'passes service check alerts' do
+    valid_query('"datadog.agent.up".over("*").last(3).count_by_status()')
+    valid_query('"datadog.agent.up".over("env:prod").last(3).count_by_status()')
+  end
+
+  it 'rejects invalid service check alerts' do
+    invalid_query('"datadog.agent.up".over("*").last(3).count_by_status() > 1')
+    invalid_query('"datadog.agent.up".over("").last(3).count_by_status() > 5')
+    invalid_query('"datadog.agent.up".over("*").last(3) > 5')
+    invalid_query('"datadog.agent.up".over("env:prod").last().count_by_status() > 5')
+  end
+
+  it 'passes event alerts' do
+    valid_query("events('sources:nagios status:error priority:normal tags:string').rollup('count').last('1h') > 1")
+    valid_query("events('sources:nagios status:error priority:normal tags:string').by('host').rollup('count').last('1h') > 1")
+    valid_query("events('sources:chef,nagios priority:low,normal status:error,warning tags:string,bean excluded_tags:bar').rollup('count').last('5m') > 10")
+  end
+
+  it 'reject invalid event alerts' do
+    invalid_query("events('sources:nagios status:error,warning priority:normal tags:string').rollup('count').last('1h')")
+    invalid_query("events('sources:nagios status:error,warning priority:normal tags:string').rollup('count') > 10")
+    invalid_query("events('sources:nagios status:error,warning priority:normal tags:string').last('1h') > 10")
+    invalid_query("events('sources:nagios status:error,warning priority:normal tags:string') > 10")
+    invalid_query("events('sources:nagios status:error,warning priority:normal tags:string').rollup('count').last('1x') > 1")
+  end
+
 end
