@@ -33,7 +33,7 @@ class AlertsRepoDatadogQueryChecker
         next
       end
 
-      dd_query = alert['metric']['datadog_query'].split.join('').strip
+      dd_query = alert['metric']['datadog_query'].strip
       if !@datadog_query_checker.validate(dd_query)
         errors += 1
         puts "Invalid datadog query in #{alert_file}: #{dd_query} #{@datadog_query_checker.failure_reason}"
