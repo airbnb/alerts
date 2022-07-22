@@ -39,10 +39,10 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.5.0)
     rspec-support (3.5.0)
-    thread_safe (0.3.5)
+    thread_safe (0.3.6)
     treetop (1.6.5)
       polyglot (~> 0.3)
-    tzinfo (1.2.2)
+    tzinfo (1.2.10)
       thread_safe (~> 0.1)
 
 PLATFORMS
